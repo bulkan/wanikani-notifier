@@ -3,15 +3,17 @@
 import { parseISO, isPast } from "date-fns";
 import formatDistanceToNow from "date-fns/formatDistanceToNow";
 import axios from "axios";
-// import cron from "node-cron";
+import cron from "node-cron";
 import { SummaryResponse } from "./types";
 
 const WK_API_KEY = process.env.WK_API_KEY;
 
 
-// function getReviewCount(reviews) {
-  
-// }
+function getReviewCount(reviews) {
+  return reviews.filter(review => isPast(parseISO(review.available_at)))
+    .map(review => review.subject_ids.length )
+    .reduce((a, b) => a + b);
+}
 
 function checkReviews() {
   const headers = {
@@ -28,7 +30,8 @@ function checkReviews() {
       const isNow = isPast(next_reviews_at);
 
       if (isNow) {
-        return "Review available now";
+        const reviewCount = getReviewCount(reviewSummary.reviews);
+        return `${reviewCount} reviews available now`;
       }
 
       return `Next review in ${formatDistanceToNow(next_reviews_at)}`;
@@ -46,8 +49,8 @@ function main() {
   //   message: "Hello, there!",
   // });
 
-  checkReviews();
-  // cron.schedule("*/30 * * * * *", checkReviews);
+  // checkReviews();
+  cron.schedule("*/30 * * * * *", checkReviews);
 }
 
 if (require.main === module) {

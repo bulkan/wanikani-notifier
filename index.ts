@@ -4,7 +4,7 @@ import { parseISO, isPast } from "date-fns";
 import formatDistanceToNow from "date-fns/formatDistanceToNow";
 import axios from "axios";
 // import cron from "node-cron";
-import { Summary } from "./types";
+import { SummaryResponse } from "./types";
 
 const WK_API_KEY = process.env.WK_API_KEY;
 
@@ -21,13 +21,12 @@ function checkReviews() {
 
   return axios
     .get("https://api.wanikani.com/v2/summary", { headers })
-    .then(({ data }) => {
-
-      const reviewSummary = data.data as Summary;
+    .then(({ data }: { data: SummaryResponse }) => {
+      const reviewSummary = data.data;
 
       const next_reviews_at = parseISO(reviewSummary.next_reviews_at);
       const isNow = isPast(next_reviews_at);
-  
+
       if (isNow) {
         return "Review available now";
       }

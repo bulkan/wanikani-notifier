@@ -3,8 +3,8 @@ import formatDistanceToNow from "date-fns/formatDistanceToNow";
 import axios from "axios";
 import cron from "node-cron";
 import ora from "ora";
-import { SummaryResponse } from "./src/types";
-import { showNotification } from "./src/notifier";
+import { SummaryResponse } from "./types";
+import { showNotification } from "./notifier";
 
 const WK_API_KEY = process.env.WK_API_KEY;
 

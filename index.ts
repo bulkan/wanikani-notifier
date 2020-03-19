@@ -1,13 +1,14 @@
-// import path from "path";
-// import notifier from "node-notifier";
 import { parseISO, isPast } from "date-fns";
 import formatDistanceToNow from "date-fns/formatDistanceToNow";
 import axios from "axios";
 import cron from "node-cron";
-import { SummaryResponse } from "./types";
+import ora from "ora";
+import { SummaryResponse } from "./src/types";
+import { showNotification } from "./src/notifier";
 
 const WK_API_KEY = process.env.WK_API_KEY;
 
+const spinner = ora();
 
 function getReviewCount(reviews) {
   return reviews.filter(review => isPast(parseISO(review.available_at)))
@@ -15,11 +16,16 @@ function getReviewCount(reviews) {
     .reduce((a, b) => a + b);
 }
 
+
+let hasNotified = false;
+
 function checkReviews() {
   const headers = {
     "Wanikani-Revision": "20170710",
     Authorization: `Bearer ${WK_API_KEY}`,
   };
+
+  spinner.spinner = 'simpleDots';
 
   return axios
     .get("https://api.wanikani.com/v2/summary", { headers })
@@ -31,26 +37,38 @@ function checkReviews() {
 
       if (isNow) {
         const reviewCount = getReviewCount(reviewSummary.reviews);
-        return `${reviewCount} reviews available now`;
+        const when = `${reviewCount} reviews available now`;
+
+        if (!hasNotified) {
+          hasNotified = true;
+          showNotification(when);
+        }
+
+        return when;
       }
 
+      hasNotified = false;
       return `Next review in ${formatDistanceToNow(next_reviews_at)}`;
     })
-    .then(when => console.log(when))
+    .then(when => {
+      spinner.spinner = 'dots';
+      spinner.text = when;
+    })
     .catch(err => console.error(err));
 }
 
 function main() {
-  // notifier.notify({
-  //   wait: false,
-  //   contentImage: path.join(__dirname, "/assets/wk.jpg"),
-  //   icon: path.join(__dirname, "/assets/wk.jpg"),
-  //   title: "My notification",
-  //   message: "Hello, there!",
-  // });
 
-  // checkReviews();
-  cron.schedule("*/30 * * * * *", checkReviews);
+  if(!WK_API_KEY) {
+    console.error("WK_API_KEY not set");
+    process.exit(1);
+  }
+
+
+  spinner.start();
+
+  checkReviews()
+    .then(() => cron.schedule("*/30 * * * * *", checkReviews));
 }
 
 if (require.main === module) {
